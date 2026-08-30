@@ -485,6 +485,695 @@
     }
   }
 
+  /* ========================================================================
+     RAG MODULE
+     ======================================================================== */
+
+  // ---- Config ----
+  const RAG_CONFIG = {
+    topK: 3,               // how many chunks to retrieve
+    minScore: 0.05,        // discard chunks below this similarity threshold
+    useHybrid: true,       // enable hybrid BM25 + cosine retrieval
+  };
+
+  // ---- BM25 hyperparameters (standard defaults for technical documents) ----
+  const BM25_K1 = 1.5;  // term frequency saturation (1.0-2.0, higher = more saturation)
+  const BM25_B = 0.75;  // document length normalization (0.0-1.0, higher = longer docs normalized more)
+
+  // ---- Persona / system prompt ----
+  const PERSONA = {
+    name: "Aravind's Assistant",
+    about: "Aravind E S — AI Software Engineer at Tata Elxsi, Kerala, India. Specializes in guarded LLM agents (MCP, RAG), real-time computer vision on edge hardware (YOLO, SAM 2.1, Jetson, TensorRT), and sensor fusion. 2 years of production experience including a U.S. safety-certified collision-warning system and a rail-safety-approved agentic platform. MCA from Cochin University. AWS Certified AI Practitioner.",
+    greeting: "Hi! I'm Aravind's AI assistant — I have access to details about Aravind's work, skills, projects, and experience. What would you like to know?",
+    outOfScope: [
+      "I can only answer questions about Aravind E S — his experience, skills, projects, education, certifications, or contact details. For everything else, you'll need to reach him directly.",
+      "I'm specifically scoped to Aravind E S's professional profile. If your question is about something else, please reach out to him at mail4aravindes@gmail.com.",
+      "This assistant is designed to answer questions about Aravind E S's background only. For general knowledge, technical help, or other topics, Aravind is reachable at mail4aravindes@gmail.com.",
+    ],
+  };
+
+  // ---- Knowledge base: loaded from assets/aravind.md ----
+  let KNOWLEDGE_BASE = null; // [{text, tokens, ...}]
+
+  // ---- Multi-word phrase dictionary ----
+  // Preserves entity meaning like "Tata Elxsi", "computer vision", etc.
+  // Extract key phrases from the profile markdown to prevent tokenization
+  // from splitting them into meaningless single tokens.
+  const PHRASE_DICTIONARY = new Set([
+    "tata elxsi", "computer vision", "artificial intelligence", "machine learning",
+    "deep learning", "sensor fusion", "edge deployment", "collision warning",
+    "rtsp streaming", "gstreamer pipeline", "redis caching", "postgresql",
+    "azure postgresql", "fastapi flask", "mlflow", "qlora", "pyndantic",
+    "nvidia jetson", "nvidia tensorrt", "cuda kernel", "twinlitenetplus",
+    "you only look once", "segment anything", "robot operating system",
+    "optical character recognition", "vision language model", "tata elxsi",
+    "collision warning system", "sensor fusion pipeline", "real-time perception",
+    "model context protocol", "retrieval augmented generation", "quantized low-rank",
+  ]);
+
+  // ---- Chunk builder ----
+  // Splits markdown into semantic chunks on heading boundaries
+  function buildChunks(markdown) {
+    const rawSections = markdown.split(/(?=^#{1,3} |^---$)/m);
+    let parentSection = null;
+    const chunks = [];
+
+    rawSections.forEach(rawText => {
+      if (!rawText.trim()) return;
+      const headingMatch = rawText.match(/^(#{1,3})\s+(.+?)$/m);
+      if (!headingMatch) return;
+
+      const level = headingMatch[1].length;
+      const heading = headingMatch[2].trim();
+
+      if (level === 2) {
+        parentSection = heading;
+      }
+
+      const body = rawText
+        .replace(/^#.*$/mg, "")
+        .replace(/\n{3,}/g, "\n\n")
+        .trim();
+
+      if (body.length <= 30) return;
+
+      // Build searchable text: include parent heading for sub-sections
+      const parentPrefix = parentSection && level >= 3 ? `${parentSection} > ` : "";
+      const searchText = `${parentPrefix}${heading}\n\n${body}`;
+
+      chunks.push({
+        heading,
+        headingLevel: level,
+        parentSection,
+        text: body,
+        searchText,
+      });
+    });
+
+    return chunks;
+  }
+
+  // ---- Acronym & Synonym Dictionary ----
+  // Expands common AI/ML acronyms and terms for broader matching
+  const SYNONYM_DICT = {
+    // Acronym expansions
+    "ml": ["machine learning"],
+    "ai": ["artificial intelligence"],
+    "cv": ["computer vision"],
+    "nlp": ["natural language processing"],
+    "rl": ["reinforcement learning"],
+    "qlora": ["quantized low-rank adaptation"],
+    "tfidf": ["term frequency inverse document frequency"],
+    "rag": ["retrieval augmented generation"],
+    "mcp": ["model context protocol"],
+    "llm": ["large language model"],
+    "gpu": ["graphics processing unit"],
+    "cpu": ["central processing unit"],
+    "api": ["application programming interface"],
+
+    // Domain synonyms
+    "yolo": ["you only look once", "object detection"],
+    "sam": ["segment anything model"],
+    "tensorrt": ["nvidia tensorrt"],
+    "onnx": ["open neural network exchange"],
+    "fastapi": ["fast api"],
+    "flask": ["flask framework"],
+    "ros": ["robot operating system"],
+    "postgres": ["postgresql"],
+    "sqlite": ["sqlite3"],
+    "rfid": ["radio frequency identification"],
+    "gps": ["global positioning system"],
+    "iot": ["internet of things"],
+  };
+
+  // ---- Enhanced tokenizer with phrase preservation ----
+  // Tokenizes text while preserving multi-word phrases as single tokens
+  // This prevents "Tata Elxsi" from becoming ["tata", "elxsi"]
+  function phraseAwareTokenize(str) {
+    const lower = str.toLowerCase();
+    const tokens = [];
+    let i = 0;
+
+    while (i < lower.length) {
+      let matched = false;
+
+      // Try to match longest multi-word phrase first
+      const sortedPhrases = Array.from(PHRASE_DICTIONARY).sort(
+        (a, b) => b.length - a.length
+      );
+
+      for (const phrase of sortedPhrases) {
+        const phraseLen = phrase.length;
+        // Check if phrase matches at current position
+        if (lower.slice(i, i + phraseLen) === phrase) {
+          tokens.push(phrase);
+          i += phraseLen;
+          matched = true;
+          break;
+        }
+      }
+
+      if (matched) continue;
+
+      // Fallback: extract single alphanumeric word
+      const match = lower.slice(i).match(/[a-z0-9]+/);
+      if (match) {
+        tokens.push(match[0]);
+        i += match[0].length;
+      } else {
+        i++;
+      }
+    }
+
+    return tokens;
+  }
+
+  // ---- Expand query terms with synonyms/acronyms ----
+  // Adds semantic expansions so "ml" searches also match "machine learning"
+  function expandQueryTerms(terms) {
+    const expanded = new Set();
+
+    for (const term of terms) {
+      // Always include the original term
+      expanded.add(term);
+
+      // Check for acronym expansion (lowercase lookup)
+      const lower = term.toLowerCase();
+      if (SYNONYM_DICT[lower]) {
+        for (const syn of SYNONYM_DICT[lower]) {
+          expanded.add(syn);
+        }
+      }
+
+      // Reverse lookup: if term is a value, add the key
+      for (const [key, values] of Object.entries(SYNONYM_DICT)) {
+        if (values.includes(term) && !expanded.has(key)) {
+          expanded.add(key);
+        }
+      }
+    }
+
+    return Array.from(expanded);
+  }
+
+  // ---- BM25 Scoring Function ----
+  // Better than TF-IDF at handling term frequency saturation
+  // k1=1.5: term frequency saturation (default)
+  // b=0.75: document length normalization (default)
+  function bm25Score(queryTokens, chunkText, idf, k1 = BM25_K1, b = BM25_B) {
+    const tokens = phraseAwareTokenize(chunkText);
+    const docLen = tokens.length;
+
+    // Build term frequency map
+    const termFreq = {};
+    for (const token of tokens) {
+      termFreq[token] = (termFreq[token] || 0) + 1;
+    }
+
+    let score = 0;
+    const seen = new Set();
+
+    for (const term of queryTokens) {
+      // Avoid double-counting same term in query
+      if (seen.has(term)) continue;
+      seen.add(term);
+
+      if (!idf[term]) continue; // term not in corpus
+
+      const tf = termFreq[term] || 0;
+      const idfVal = idf[term];
+
+      // BM25: idf * (tf * (k1 + 1)) / (tf + k1 * (1 - b + b * docLen/avgDocLen))
+      const saturation = (tf * (k1 + 1)) / (tf + k1 * (1 - b + b * docLen / 50)); // avgDocLen ~50
+      score += idfVal * saturation;
+    }
+
+    return score;
+  }
+
+  // ---- Enrich chunks with semantic tags for better matching ----
+  // Adds derived content that improves both BM25 and cosine similarity
+  function enrichChunksForSearch(chunks) {
+    return chunks.map(chunk => {
+      const text = chunk.searchText || chunk.text;
+      const lowerText = text.toLowerCase();
+
+      const semanticTags = [];
+
+      // Extract skill-based tags
+      const skillKeywords = [
+        "yolo", "sam", "tensorrt", "cuda", "onnx", "fastapi",
+        "postgresql", "redis", "docker", "kubernetes", "jetson",
+        "python", "c++", "sql", "ml", "ai", "computer vision",
+        "deep learning", "nlp", "mcp", "rag", "qlora", "pyndantic",
+        "twinlitenetplus", "ros", "rfid", "gps", "iot",
+      ];
+
+      skillKeywords.forEach((skill) => {
+        if (lowerText.includes(skill)) {
+          semanticTags.push(`skill:${skill}`);
+        }
+      });
+
+      // Entity/location tags
+      if (lowerText.includes("tata elxsi")) {
+        semanticTags.push("company:tata-elxsi");
+        semanticTags.push("experience:enterprise-ai");
+      }
+      if (lowerText.includes("kerala")) {
+        semanticTags.push("location:kerala");
+      }
+      if (lowerText.includes("rail") || lowerText.includes("safety")) {
+        semanticTags.push("domain:rail-safety");
+        semanticTags.push("application:safety-critical");
+      }
+
+      // Platform/cloud tags
+      if (lowerText.includes("aws")) semanticTags.push("cloud:aws");
+      if (lowerText.includes("azure")) semanticTags.push("cloud:azure");
+      if (lowerText.includes("docker")) semanticTags.push("deployment:docker");
+      if (lowerText.includes("kubernetes")) semanticTags.push("deployment:kubernetes");
+
+      // Project type tags
+      if (lowerText.includes("perception")) semanticTags.push("project:perception");
+      if (lowerText.includes("collision")) semanticTags.push("project:collision-warning");
+      if (lowerText.includes("sensor")) semanticTags.push("project:sensor-fusion");
+      if (lowerText.includes("agentic")) semanticTags.push("project:agentic-ai");
+
+      return {
+        ...chunk,
+        semanticTags,
+        // Enhanced search text combining original with semantic tags
+        searchTextEnhanced: `${text} ${semanticTags.join(" ")}`,
+      };
+    });
+  }
+
+  // ---- TF-IDF + Cosine functions (updated for hybrid retrieval) ----
+  function buildIdf(chunks) {
+    const docFreq = {};
+    chunks.forEach(chunk => {
+      const uniqueTerms = new Set(
+        phraseAwareTokenize(chunk.searchTextEnhanced || chunk.searchText || chunk.text)
+      );
+      uniqueTerms.forEach(t => { docFreq[t] = (docFreq[t] || 0) + 1; });
+    });
+    const N = chunks.length;
+    return Object.fromEntries(
+      Object.entries(docFreq).map(([t, df]) => [t, Math.log((N + 1) / (df + 1))])
+    );
+  }
+
+  function buildTfIdfVec(tokens, idf) {
+    const tf = {};
+    tokens.forEach(t => { tf[t] = (tf[t] || 0) + 1; });
+    const maxTf = Math.max(...Object.values(tf), 1);
+    return Object.fromEntries(
+      Object.entries(tf).map(([t, f]) => [t, (f / maxTf) * (idf[t] || 0)])
+    );
+  }
+
+  function cosineSim(a, b) {
+    const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
+    let dot = 0, magA = 0, magB = 0;
+    keys.forEach(k => {
+      dot += (a[k] || 0) * (b[k] || 0);
+      magA += (a[k] || 0) ** 2;
+      magB += (b[k] || 0) ** 2;
+    });
+    return dot / (Math.sqrt(magA) * Math.sqrt(magB) + 1e-9);
+  }
+
+  // ---- Hybrid Retrieval: BM25 Keyword + Cosine Semantic ----
+  // Combines keyword matching strength (BM25) with semantic similarity (cosine)
+  // This fixes both the "Tata Elxsi" problem (BM25 phrase matching) AND
+  // the "computer vision" semantic problem (cosine similarity)
+  function hybridRetrieveChunks(query, chunks, idf, k = 3, minScore = 0.05) {
+    // Phase 1: Preprocess query - expand with synonyms + phrase tokenize
+    const rawTokens = phraseAwareTokenize(query);
+    const expandedTokens = expandQueryTerms(rawTokens);
+    const qTokens = phraseAwareTokenize(expandedTokens.join(" "));
+
+    // Phase 2: BM25 keyword scoring (excellent for exact phrases, acronyms)
+    const bm25Results = chunks
+      .map(chunk => ({
+        chunk,
+        score: bm25Score(qTokens, chunk.searchTextEnhanced || chunk.searchText || chunk.text, idf),
+      }))
+      .filter(r => r.score >= minScore)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, k);
+
+    // Phase 3: Cosine similarity on enriched text (excellent for semantic meaning)
+    // Use the enhanced search text that includes semantic tags
+    const enrichedChunks = enrichChunksForSearch(chunks);
+    const queryForCosine = phraseAwareTokenize(expandedTokens.join(" "));
+
+    const cosineResults = enrichedChunks
+      .map(chunk => ({
+        chunk,
+        score: cosineSim(
+          buildTfIdfVec(qTokens, idf),
+          buildTfIdfVec(phraseAwareTokenize(chunk.searchTextEnhanced), idf)
+        ),
+      }))
+      .filter(r => r.score >= minScore)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, k);
+
+    // Phase 4: Hybrid scoring - combine both methods
+    // Weighted: 50% BM25 + 30% Cosine + 20% phrase match count
+    const scoredResults = new Map();
+
+    // Seed with BM25 results
+    bm25Results.forEach((result, idx) => {
+      const key = JSON.stringify(result.chunk);
+      scoredResults.set(key, {
+        chunk: result.chunk,
+        bm25Score: result.score,
+        cosineScore: 0,
+        phraseMatchCount: 0,
+        rankSum: idx + 1,
+      });
+    });
+
+    // Add/boost with cosine results
+    cosineResults.forEach((result, idx) => {
+      const key = JSON.stringify(result.chunk);
+      if (!scoredResults.has(key)) {
+        scoredResults.set(key, {
+          chunk: result.chunk,
+          bm25Score: 0,
+          cosineScore: result.score,
+          phraseMatchCount: 0,
+          rankSum: idx + k + 1, // offset rank
+        });
+      } else {
+        scoredResults.get(key).cosineScore = result.score;
+        scoredResults.get(key).rankSum += idx + k + 1;
+      }
+    });
+
+    // Count phrase matches for additional boosting
+    const queryLower = query.toLowerCase();
+    chunks.forEach(chunk => {
+      const textLower = (chunk.searchText || chunk.text).toLowerCase();
+      const matches = qTokens.filter(term => textLower.includes(term)).length;
+      if (matches > 0) {
+        const key = JSON.stringify(chunk);
+        if (scoredResults.has(key)) {
+          scoredResults.get(key).phraseMatchCount = matches;
+        } else {
+          scoredResults.set(key, {
+            chunk,
+            bm25Score: 0,
+            cosineScore: 0,
+            phraseMatchCount: matches,
+            rankSum: chunks.length + 1,
+          });
+        }
+      }
+    });
+
+    // Compute final hybrid score: weighted combination
+    const hybridResults = Array.from(scoredResults.values())
+      .map(result => {
+        // Hybrid formula: BM25(0.5) + Cosine(0.3) + Phrase(0.2)
+        const hybridScore = (
+          result.bm25Score * 0.5 +
+          result.cosineScore * 0.3 +
+          result.phraseMatchCount * 0.2
+        );
+
+        return {
+          ...result,
+          finalScore: hybridScore,
+          // Normalize: ensure we have at least some score
+          displayScore: hybridScore > 0 ? hybridScore : 0.01,
+        };
+      })
+      .sort((a, b) => b.finalScore - a.finalScore)
+      .slice(0, k);
+
+    // Return chunks sorted by hybrid score
+    return hybridResults.map(r => ({
+      ...r,
+      relevanceScore: r.finalScore,
+    }));
+  }
+
+  // Out-of-scope detection (unchanged)
+
+  // Out-of-scope detection: check if query is about Aravind at all
+  function isOutOfScope(query) {
+    const aravindTerms = [
+      "aravind", "es", "tata elxsi", "ai engineer", "ml", "llm", "rag", "mcp",
+      "jetson", "yolo", "sam", "tensorrt", "cuda", "onnx", "fastapi", "docker",
+      "postgresql", "redis", "python", "c++", "resume", "cv", "experience",
+      "project", "skill", "certification", "education", "portfolio", "contact",
+      "linkedin", "rail", "sensor", "fusion", "edge", "computer vision",
+      "collision", "warning", "rehabilitation", "healthcare", "agentic", "aws",
+    ];
+    const queryLower = query.toLowerCase();
+    const hits = aravindTerms.filter(t => queryLower.includes(t)).length;
+    return hits === 0;
+  }
+
+  // Load knowledge base from assets/aravind.md (fetched once, cached in memory)
+  let _kbFetchPromise = null;
+  function loadKnowledgeBase() {
+    if (KNOWLEDGE_BASE) return Promise.resolve(KNOWLEDGE_BASE);
+    if (_kbFetchPromise) return _kbFetchPromise;
+    _kbFetchPromise = fetch("assets/aravind.md")
+      .then(r => r.ok ? r.text() : null)
+      .then(text => {
+        if (!text) { KNOWLEDGE_BASE = []; return []; }
+        KNOWLEDGE_BASE = buildChunks(text);
+        return KNOWLEDGE_BASE;
+      })
+      .catch(() => { KNOWLEDGE_BASE = []; return []; });
+    return _kbFetchPromise;
+  }
+
+  // Build IDF once knowledge base is loaded
+  let _idf = null;
+  function ensureIdf() {
+    if (!_idf && KNOWLEDGE_BASE && KNOWLEDGE_BASE.length > 0) {
+      _idf = buildIdf(KNOWLEDGE_BASE);
+    }
+    return _idf;
+  }
+
+  // ---- RAG generator (extractive — no external API required) ----
+
+  // Greeting / small-talk patterns — answered with a short identity line,
+  // not a KB lookup. Keeps the chat feeling responsive.
+  const GREETING_PATTERNS = /^(hi|hello|hey|hiya|yo|sup|hola|howdy|greetings|good\s+(morning|afternoon|evening))\b[!.?]*\s*$/i;
+  const IDENTITY_PATTERNS = /^(who\s+are\s+you|what\s+are\s+you|are\s+you\s+(real|an?\s+ai|a\s+bot|human)|what\s+is\s+this)\b[?!.]*\s*$/i;
+  const THANKS_PATTERNS = /^(thanks|thank\s+you|ty|thx|appreciate\s+it|cheers)\b[!.]*\s*$/i;
+
+  function isGreeting(q) {
+    return GREETING_PATTERNS.test(q.trim());
+  }
+
+  function isIdentityQuestion(q) {
+    return IDENTITY_PATTERNS.test(q.trim());
+  }
+
+  function isThanks(q) {
+    return THANKS_PATTERNS.test(q.trim());
+  }
+
+  // Strip markdown noise from a chunk for display. The KB is trusted, so we
+  // also return this text as HTML (no escaping in the bot reply path).
+  function cleanChunkText(text) {
+    return text
+      .replace(/^#+\s*/gm, "")
+      .replace(/^---+\s*$/gm, "")
+      .replace(/\*\*(.+?)\*\*/g, "$1")
+      .replace(/\*(.+?)\*/g, "$1")
+      .replace(/`(.+?)`/g, "$1")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
+  }
+
+  async function ragGenerate(userQuery) {
+    const q = (userQuery || "").trim();
+    if (!q) return { done: true, text: PERSONA.greeting };
+
+    // Conversational shortcuts
+    if (isGreeting(q)) {
+      return {
+        done: true,
+        text: `Hi! 👋 I'm <b>${PERSONA.name}</b> — Aravind's AI assistant. Ask me anything about his work, skills, projects, or experience.`,
+      };
+    }
+    if (isIdentityQuestion(q)) {
+      return {
+        done: true,
+        text: `I'm <b>${PERSONA.name}</b>, a small RAG assistant that answers questions about Aravind E S using his profile (<span class="out-ok">assets/aravind.md</span>). I'm grounded in the same content the terminal displays — no external LLM calls, no fabricated details.`,
+      };
+    }
+    if (isThanks(q)) {
+      return {
+        done: true,
+        text: `You're welcome! If you'd like to get in touch, Aravind is at <a class="out-link" href="mailto:mail4aravindes@gmail.com">mail4aravindes@gmail.com</a>.`,
+      };
+    }
+
+    // Out-of-scope: only redirect if the query has zero Aravind-related
+    // signal AND isn't a single short word (so casual phrasings like
+    // "contact" or "phone" still get a chance to hit the KB).
+    if (q.split(/\s+/).length > 1 && isOutOfScope(q)) {
+      const reply = PERSONA.outOfScope[Math.floor(Math.random() * PERSONA.outOfScope.length)];
+      return { done: true, text: reply };
+    }
+
+    await loadKnowledgeBase();
+    const idf = ensureIdf();
+
+    // Retrieve relevant context chunks (use a lower threshold so short
+    // single-word queries like "skills" still get a hit)
+    const threshold = q.split(/\s+/).length === 1 ? 0.0 : RAG_CONFIG.minScore;
+    let chunks = [];
+    if (idf && KNOWLEDGE_BASE.length > 0) {
+      // Use hybrid retrieval: BM25 keyword matching + cosine semantic similarity
+      // This combines exact phrase matching ("Tata Elxsi") with semantic similarity
+      // ("computer vision" meaning) for maximum accuracy
+      chunks = hybridRetrieveChunks(
+        q,
+        KNOWLEDGE_BASE,
+        idf,
+        RAG_CONFIG.topK,
+        RAG_CONFIG.minScore
+      );
+    }
+
+    if (chunks.length === 0) {
+      return {
+        done: true,
+        text: `I couldn't find a specific answer to that in Aravind's profile. For anything specific, reach him at <a class="out-link" href="mailto:mail4aravindes@gmail.com">mail4aravindes@gmail.com</a> or <a class="out-link" href="${LINKS.linkedin}" target="_blank" rel="noopener">LinkedIn</a>.`,
+      };
+    }
+
+    // Build a clean HTML response. Deduplicate chunks that came from the
+    // same parent section, and prefer the most relevant representative.
+    const seenParents = new Set();
+    const deduped = [];
+    for (const c of chunks) {
+      const key = c.parentSection || c.heading;
+      if (seenParents.has(key)) continue;
+      seenParents.add(key);
+      deduped.push(c);
+      if (deduped.length >= 2) break;
+    }
+
+    const sections = deduped.map(c => {
+      const headingLabel = c.parentSection && c.headingLevel >= 3
+        ? `${escapeHtml(c.parentSection)} — ${escapeHtml(c.heading)}`
+        : escapeHtml(c.heading);
+      const body = escapeHtml(cleanChunkText(c.text))
+        .replace(/\n\n/g, "</p><p>")
+        .replace(/^/, "<p>")
+        .replace(/$/, "</p>")
+        .replace(/<p><\/p>/g, "");
+      return `<div class="rag-section"><div class="rag-heading">${headingLabel}</div>${body}</div>`;
+    });
+
+    return {
+      done: true,
+      text: `<div class="rag-answer">${sections.join("")}</div><div class="rag-footer"><span class="out-dim">Sourced from Aravind's profile · for anything else, reach him at <a class="out-link" href="mailto:mail4aravindes@gmail.com">mail4aravindes@gmail.com</a></span></div>`,
+    };
+  }
+
+  /* ========================================================================
+     CHAT UI MODULE
+     ======================================================================== */
+
+  let chatHistory = []; // [{role:"user"|"assistant", content}]
+
+  function escapeHtmlChat(str) {
+    return String(str)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  function appendChatMsg(role, html) {
+    const thread = $("#chat-thread");
+    const div = document.createElement("div");
+    div.className = `chat-msg ${role}`;
+    const bubble = document.createElement("div");
+    bubble.className = "chat-bubble";
+    bubble.innerHTML = html;
+    div.appendChild(bubble);
+    thread.appendChild(div);
+    thread.scrollTop = thread.scrollHeight;
+    return div;
+  }
+
+  function appendTypingIndicator() {
+    const thread = $("#chat-thread");
+    const div = document.createElement("div");
+    div.className = "chat-msg bot";
+    div.id = "chat-typing";
+    div.innerHTML = `<div class="chat-bubble chat-typing"><div class="chat-typing-dot"></div><div class="chat-typing-dot"></div><div class="chat-typing-dot"></div></div>`;
+    thread.appendChild(div);
+    thread.scrollTop = thread.scrollHeight;
+    return div;
+  }
+
+  function removeTypingIndicator() {
+    const el = $("#chat-typing");
+    if (el) el.remove();
+  }
+
+  function openChatPanel() {
+    const panel = $("#chat-panel");
+    panel.classList.remove("hidden");
+    const thread = $("#chat-thread");
+    if (thread.children.length === 0) {
+      // First open: show welcome
+      appendChatMsg("bot",
+        `<strong>${escapeHtmlChat(PERSONA.name)}</strong>\n${escapeHtmlChat(PERSONA.greeting)}`
+      );
+    }
+    $("#chat-input").focus();
+  }
+
+  function closeChatPanel() {
+    $("#chat-panel").classList.add("hidden");
+  }
+
+  async function handleChatSubmit(rawText) {
+    const text = rawText.trim();
+    if (!text) return;
+
+    appendChatMsg("user", escapeHtmlChat(text));
+    chatHistory.push({ role: "user", content: text });
+
+    const typingEl = appendTypingIndicator();
+    $("#chat-send").disabled = true;
+
+    try {
+      const result = await ragGenerate(text);
+      removeTypingIndicator();
+      chatHistory.push({ role: "assistant", content: result.text });
+      // ragGenerate returns trusted HTML (built from the local KB) — render
+      // it as-is. User input is still escaped via escapeHtmlChat above.
+      appendChatMsg("bot", result.text);
+    } catch (err) {
+      removeTypingIndicator();
+      appendChatMsg("bot",
+        `<span class="out-error">Error:</span> ${escapeHtmlChat(err.message)}`
+      );
+    } finally {
+      $("#chat-send").disabled = false;
+      $("#chat-input").focus();
+    }
+  }
+
   /* -----------------------------------------------------------------------
      DOM HELPERS
      ----------------------------------------------------------------------- */
@@ -729,6 +1418,7 @@
         row("open &lt;target&gt;", "open linkedin / email / resume.pdf"),
         row("theme &lt;name&gt;", "green (default) / amber / mono"),
         row("scan", "run a sensor sweep (easter egg)"),
+        row("ask", "open AI assistant (chat with RAG over aravind.md)"),
         row("sudo hire aravind", "..."),
         row("history", "your command history"),
         row("clear", "clear the screen"),
@@ -982,6 +1672,42 @@
     outputEl().innerHTML = "";
   }
 
+  function cmd_ask() {
+    grantSkill("ask", print);
+    print(
+      [
+        agentThread([
+          { agent: "assistant-agent", html: `I am <b>Aravind's Assistant</b> — I have memory of Aravind E S built from <span class="out-ok">assets/aravind.md</span>.` },
+          { agent: "assistant-agent", html: `I can answer questions about his experience, skills, projects, education, and certifications. Out-of-scope questions are politely declined.` },
+        ]),
+        `<div class="readable-view">`,
+        `  <div class="readable-head">`,
+        `    <span class="out-heading">Aravind's Assistant</span>`,
+        `    <span class="out-dim">Grounded in assets/aravind.md</span>`,
+        `  </div>`,
+        `  <p style="color:var(--text-dim);font-size:13px;line-height:1.6;">`,
+        `    A RAG-powered assistant that answers questions about Aravind E S — his work`,
+        `    experience, projects, technical skills, education, and certifications.`,
+        `    Questions outside this scope are politely declined.`,
+        `  </p>`,
+        `  <p style="color:var(--text-dim);font-size:13px;line-height:1.6;">`,
+        `    The assistant retrieves relevant context from Aravind's profile using`,
+        `    <b>hybrid BM25 keyword scoring + cosine semantic similarity</b> with`,
+        `    phrase-aware tokenization and acronym expansion. No external API key`,
+        `    is required.`,
+        `  </p>`,
+        `  <div class="tour-actions">`,
+        `    ${actionButton("Open Chat", "open-chat", "primary")}`,
+        `  </div>`,
+        `</div>`,
+      ].join("")
+    );
+  }
+
+  function cmd_openchat() {
+    openChatPanel();
+  }
+
   function maybeCompletionAchievement() {
     const allProjectsSeen = PROJECT_ORDER.every((p) => state.visitedProjects.has(p));
     if (allProjectsSeen) {
@@ -1010,6 +1736,10 @@
     scan: cmd_scan,
     matrix: cmd_scan,
     sudo: cmd_sudo,
+    ask: cmd_ask,
+    rag: cmd_ask,
+    chat: cmd_openchat,
+    "open-chat": cmd_openchat,
     history: cmd_history,
     clear: cmd_clear,
     exit: () => print(`<span class="out-dim">there is no spoon. (also: no exit — just close the tab)</span>`),
@@ -1233,6 +1963,25 @@
           input.value = autocomplete(input.value);
         }
       });
+
+      // ---- Wire up the chat panel form ----
+      const chatForm = $("#chat-form");
+      const chatInput = $("#chat-input");
+      if (chatForm && chatInput) {
+        chatForm.addEventListener("submit", (e) => {
+          e.preventDefault();
+          handleChatSubmit(chatInput.value);
+          chatInput.value = "";
+        });
+        chatInput.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            handleChatSubmit(chatInput.value);
+            chatInput.value = "";
+          }
+        });
+        $("#chat-close").addEventListener("click", closeChatPanel);
+      }
     });
   }
 
