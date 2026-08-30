@@ -1,0 +1,11 @@
+# Local environment — do not commit real API keys
+.env
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+*.log
+.claude/
+.codex/
+.claude/settings.json
