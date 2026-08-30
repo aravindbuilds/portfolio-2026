@@ -6,7 +6,6 @@ This is the complete, unabridged reference compiled from all resume variants (AI
 
 ---
 
-<<<<<<< HEAD
 ## Contact
 
 - **Email:** mail4aravindes@gmail.com
@@ -17,8 +16,6 @@ This is the complete, unabridged reference compiled from all resume variants (AI
 
 ---
 
-=======
->>>>>>> d897dda4e14fde532a61b8492b5bf10fa317ece8
 ## Experience
 
 ### Tata Elxsi — AI Software Engineer

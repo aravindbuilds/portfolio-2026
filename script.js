@@ -915,9 +915,15 @@
       .sort((a, b) => b.finalScore - a.finalScore)
       .slice(0, k);
 
-    // Return chunks sorted by hybrid score
+    // Return chunks sorted by hybrid score, with chunk fields flattened so
+    // downstream callers (ragGenerate) can read heading / parentSection /
+    // text directly instead of going through .chunk.
     return hybridResults.map(r => ({
-      ...r,
+      ...r.chunk,
+      bm25Score: r.bm25Score,
+      cosineScore: r.cosineScore,
+      phraseMatchCount: r.phraseMatchCount,
+      finalScore: r.finalScore,
       relevanceScore: r.finalScore,
     }));
   }
