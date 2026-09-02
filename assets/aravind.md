@@ -2,7 +2,7 @@
 
 Kerala, India | +91 9496915905 | mail4aravindes@gmail.com | linkedin.com/in/aravind-es
 
-This is the complete, unabridged reference compiled from all resume variants (AI/ML, Software Engineering, Edge/ADAS, Harman-Agentic, Hybrid). Each resume surfaces a subset of this content, framed for its target audience. Use this file as the source of truth when tailoring a new resume, writing a cover letter, or prepping for an interview.
+This is the complete, unabridged reference compiled from all resume variants (AI/ML, Software Engineering, Edge/ADAS, Harman-Agentic, Hybrid). Each resume surfaces a subset of this content, framed for its target audience. Use this file as the source of truth when answering questions about Aravind.
 
 ---
 
@@ -31,7 +31,7 @@ This is the complete, unabridged reference compiled from all resume variants (AI
 #### Sub-project: Real-Time Perception & Collision Prediction
 - Developed and optimized real-time perception inference pipelines using TensorRT, CUDA, and NVIDIA Jetson for production automotive applications, reducing model inference latency by approximately 25%.
 - Developed low-latency vehicle perception pipelines combining radar, camera, GPS, and vehicle-state signals for real-time collision-risk analysis, with multithreaded processing.
-- **Delivered a collision-warning system that achieved U.S. safety certification for production deployment.** *(Note: this certification belongs to the collision-warning/ADAS system — not the inventory platform.)*
+- **Helped develop a collision-warning solution that received U.S. safety certification for production deployment.** *(The certification belongs to the solution, not to Aravind personally or the inventory platform.)*
 
 #### Sub-project: Computer Vision & Edge Deployment
 - Deployed and optimized computer-vision workloads (YOLO, SAM 2.1 zero-shot, OCR/VLM, multi-camera tracking, camera calibration) on NVIDIA Jetson, adapting pipelines to constrained compute, memory, and power budgets.
@@ -56,7 +56,7 @@ This is the complete, unabridged reference compiled from all resume variants (AI
 - Engineered an edge-deployed ADAS perception pipeline combining camera-based ego-path detection with radar and GPS signals for real-time vehicle-risk analysis.
 - Optimized TwinLiteNetPlus inference using ONNX and TensorRT/CUDA for low-latency deployment on NVIDIA Jetson hardware.
 - Designed a sensor-fusion pipeline integrating radar, camera, and GPS/vehicle-state data, improving collision-risk estimation over single-sensor approaches.
-- Achieved U.S. safety certification for the collision-warning system, validating it for production deployment.
+- Helped develop the collision-warning solution that received U.S. safety certification for production deployment.
 - Implemented real-time perception and warning pipelines with hardware-aware inference optimization for embedded automotive environments.
 
 ### Agentic AI Clinical Fall Intelligence Platform
