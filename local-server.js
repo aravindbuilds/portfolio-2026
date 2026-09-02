@@ -56,8 +56,8 @@ const MIME = {
 // ── OpenRouter proxy ─────────────────────────────────────────────────────
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
-const DEFAULT_MODEL = "openai/gpt-oss-120b";
-const FALLBACK_MODELS = ["openai/gpt-oss-20b", "llama-3.3-70b-versatile"];
+const DEFAULT_MODEL = "llama-3.1-8b-instant";
+const FALLBACK_MODELS = ["llama-3.3-70b-versatile", "llama-3.1-70b-versatile"];
 const CONTEXT_PATH = join(ROOT, "assets", "aravind.md");
 const NORMALIZER_PROMPT = `You are the scope and normalization layer for Aravind E S's portfolio assistant.
 Return ONLY JSON: {"normalized":"...","in_scope":true|false,"intent":"greeting"|"question","reason":"..."}.
@@ -88,11 +88,18 @@ async function callWithFallback(messages, maxTokens, temperature) {
   let lastError;
   for (const provider of providers) for (const model of provider.models) {
     try {
-      const response = await fetch(provider.url, { method: "POST", headers: { Authorization: `Bearer ${provider.key}`, "Content-Type": "application/json" }, body: JSON.stringify({ model, messages, temperature, ...(provider.url.includes("groq") ? { max_completion_tokens: maxTokens, reasoning_effort: "medium" } : { max_tokens: maxTokens }) }) });
-      if (!response.ok) throw new Error(`${provider.url.includes("groq") ? "Groq" : "OpenRouter"} ${response.status}`);
+      const response = await fetch(provider.url, { method: "POST", headers: { Authorization: `Bearer ${provider.key}`, "Content-Type": "application/json" }, body: JSON.stringify({ model, messages, temperature, ...(provider.url.includes("groq") ? { max_completion_tokens: maxTokens } : { max_tokens: maxTokens }) }) });
+      if (!response.ok) {
+        const error = new Error(`${provider.url.includes("groq") ? "Groq" : "OpenRouter"} ${response.status}`);
+        error.status = response.status;
+        throw error;
+      }
       const data = await response.json();
       return { text: data?.choices?.[0]?.message?.content || "", model: data?.model || model, usage: data?.usage || null };
-    } catch (error) { lastError = error; }
+    } catch (error) {
+      lastError = error;
+      if (error.status && ![408, 429, 500, 502, 503, 504].includes(error.status)) break;
+    }
   }
   throw lastError;
 }
@@ -115,11 +122,11 @@ async function handleChat(body) {
   }
   try {
     const context = await readFile(CONTEXT_PATH, "utf8");
-    const first = await callWithFallback([{ role: "system", content: NORMALIZER_PROMPT }, { role: "user", content: query.slice(0, 1200) }], 180, 0);
+    const first = await callWithFallback([{ role: "system", content: NORMALIZER_PROMPT }, { role: "user", content: query.slice(0, 1200) }], 100, 0);
     const normalized = parseNormalizer(first.text);
     if (!normalized.inScope || !normalized.normalized) return { status: 200, body: { answer: "NONE", in_scope: false } };
     if (normalized.intent === "greeting") return { status: 200, body: { answer: "GREETING", normalized: normalized.normalized, in_scope: true, intent: "greeting" } };
-    const second = await callWithFallback([{ role: "system", content: ANSWER_PROMPT + context.slice(0, 50000) }, { role: "user", content: normalized.normalized }], 700, 0.2);
+    const second = await callWithFallback([{ role: "system", content: ANSWER_PROMPT + context.slice(0, 50000) }, { role: "user", content: normalized.normalized }], 350, 0.2);
     return { status: 200, body: { answer: second.text, normalized: normalized.normalized, in_scope: true, model: second.model, usage: second.usage } };
   } catch (err) { return { status: 502, body: { error: "two_step_llm_error", message: String(err.message || err) } }; }
 }
@@ -146,7 +153,6 @@ async function handleClassify(body) {
     resp = await fetch(OPENROUTER_URL, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
         "HTTP-Referer": process.env.SITE_URL || "http://localhost:3000",
         "X-Title": "Aravind Portfolio Assistant",

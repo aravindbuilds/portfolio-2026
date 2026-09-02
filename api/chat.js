@@ -9,8 +9,8 @@ import { fileURLToPath } from "url";
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
-const DEFAULT_MODEL = "openai/gpt-oss-120b";
-const FALLBACK_MODELS = ["openai/gpt-oss-20b", "llama-3.3-70b-versatile"];
+const DEFAULT_MODEL = "llama-3.1-8b-instant";
+const FALLBACK_MODELS = ["llama-3.3-70b-versatile", "llama-3.1-70b-versatile"];
 const MAX_TOKENS_CAP = 1200;
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const CONTEXT_PATH = join(ROOT, "assets", "aravind.md");
@@ -75,8 +75,10 @@ async function callModel(apiKey, messages, options = {}) {
 async function callWithFallback(messages, options = {}) {
   const providers = [];
   if (process.env.GROQ_API_KEY) {
-    providers.push({ key: process.env.GROQ_API_KEY, url: GROQ_URL, models: [options.model || DEFAULT_MODEL, ...FALLBACK_MODELS] });
+      signal: controller.signal,
+      body: JSON.stringify({ model, messages, temperature: options.temperature ?? 0.1, ...(provider.url.includes("groq") ? { max_completion_tokens: options.maxTokens || 600 } : { max_tokens: options.maxTokens || 600 }) }),
   }
+    clearTimeout(timeout);
   if (process.env.OPENROUTER_API_KEY) {
     providers.push({ key: process.env.OPENROUTER_API_KEY, url: OPENROUTER_URL, models: ["openrouter/free"] });
   }
@@ -89,29 +91,38 @@ async function callWithFallback(messages, options = {}) {
         const response = await fetch(provider.url, {
           method: "POST",
           headers: { Authorization: `Bearer ${provider.key}`, "Content-Type": "application/json" },
-          body: JSON.stringify({ model, messages, temperature: options.temperature ?? 0.1, ...(provider.url.includes("groq") ? { max_completion_tokens: options.maxTokens || 600, reasoning_effort: "medium" } : { max_tokens: options.maxTokens || 600 }) }),
+          body: JSON.stringify({ model, messages, temperature: options.temperature ?? 0.1, ...(provider.url.includes("groq") ? { max_completion_tokens: options.maxTokens || 600 } : { max_tokens: options.maxTokens || 600 }) }),
         });
-        if (!response.ok) throw new Error(`${provider.url.includes("groq") ? "Groq" : "OpenRouter"} ${response.status}: ${(await response.text()).slice(0, 300)}`);
+        if (!response.ok) {
+          const error = new Error(`${provider.url.includes("groq") ? "Groq" : "OpenRouter"} ${response.status}: ${(await response.text()).slice(0, 300)}`);
+          error.status = response.status;
+  return jsonResponse(200, { answer: answerResult.text, normalized: normalized.normalized, in_scope: true, model: answerResult.model, usage: answerResult.usage });
+        }
         const data = await response.json();
         return { text: data?.choices?.[0]?.message?.content || "", model: data?.model || model, usage: data?.usage || null };
-      } catch (error) { lastError = error; }
+      } catch (error) {
+        lastError = error;
+        if (error.status && ![408, 429, 500, 502, 503, 504].includes(error.status)) break;
+      }
     }
   }
   throw lastError;
+  const providerTimeout = 8000;
 }
 
 function parseNormalizer(text) {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), providerTimeout);
   const raw = String(text || "").replace(/^```(?:json)?\s*|\s*```$/g, "").trim();
   try {
     const parsed = JSON.parse(raw);
-    return {
-      normalized: String(parsed.normalized || "").trim().slice(0, 1000),
-      inScope: parsed.in_scope === true,
-      intent: parsed.intent === "greeting" ? "greeting" : "question",
+          signal: controller.signal,
+          body: JSON.stringify({ model, messages, temperature: options.temperature ?? 0.1, ...(provider.url.includes("groq") ? { max_completion_tokens: options.maxTokens || 600 } : { max_tokens: options.maxTokens || 600 }) }),
+        });
+        clearTimeout(timeout);
       reason: String(parsed.reason || "").slice(0, 120),
     };
   } catch {
-    return { normalized: "", inScope: false, reason: "normalizer returned invalid JSON" };
   }
 }
 
@@ -148,7 +159,7 @@ export default async function handler(req, res) {
     const normalizedResult = await callWithFallback([
       { role: "system", content: NORMALIZER_PROMPT },
       { role: "user", content: query.slice(0, 1200) },
-    ], { model, maxTokens: 180, temperature: 0 });
+    ], { model, maxTokens: 100, temperature: 0 });
     const normalized = parseNormalizer(normalizedResult.text);
     if (!normalized.inScope || !normalized.normalized) {
       return jsonResponse(200, {
@@ -165,7 +176,7 @@ export default async function handler(req, res) {
     const answerResult = await callWithFallback([
       { role: "system", content: `${ANSWER_PROMPT}${context.slice(0, 50000)}` },
       { role: "user", content: normalized.normalized },
-    ], { model, maxTokens: Math.min(MAX_TOKENS_CAP, 700), temperature: 0.2 });
+    ], { model, maxTokens: Math.min(MAX_TOKENS_CAP, 350), temperature: 0.2 });
     return jsonResponse(200, { answer: answerResult.text, normalized: normalized.normalized, in_scope: true, model: answerResult.model, usage: answerResult.usage });
   } catch (err) {
     return jsonResponse(502, { error: "two_step_llm_error", message: String(err?.message || err) });

@@ -13,12 +13,12 @@ export const PROJECTS = {
     tags: ["FastAPI", "MCP", "RAG", "Pydantic", "Redis", "PostgreSQL"],
     body: [
       `A production LLM agent sitting in front of live railcar-inventory`,
-      `data — built on the assumption that a model will eventually try to`,
+      `data, built on the assumption that a model will eventually try to`,
       `say something untrue, so the architecture is designed to make that`,
       `harmless. Designed and shipped to the client for production use.`,
       ``,
       `<span class="out-bullet">Read-only access, validated queries, and Pydantic schemas</span>`,
-      `  around every model output — no hallucinated writes reach`,
+      `  around every model output, so no hallucinated writes reach`,
       `  production data.`,
       `<span class="out-bullet">A RAG layer grounds the agent's reasoning in real-time database</span>`,
       `  state fused with operating-procedure documentation.`,
@@ -37,7 +37,7 @@ export const PROJECTS = {
     year: "2026",
     tags: ["ONNX", "TensorRT", "CUDA", "Jetson", "Sensor Fusion", "Regression"],
     body: [
-      `An edge-deployed perception pipeline integrating camera ego-path`,
+      `An edge deployed perception pipeline integrating camera ego path`,
       `detection with radar and GPS telemetry for real-time vehicle-risk`,
       `analysis, running on hardware that doesn't get to phone home for`,
       `more compute. Includes a trained and optimized regression model that`,
@@ -85,11 +85,11 @@ export const PROJECTS = {
       ``,
       `<span class="out-bullet">Care staff define weighted patient goals, tasks, and milestones;</span>`,
       `  progress is computed deterministically from structured activity`,
-      `  logs — no LLM in that path.`,
+      `  logs, with no LLM in that path.`,
       `<span class="out-bullet">A separate LLM review layer reads that ground truth to surface</span>`,
       `  strengths, blockers, and timeline risk in plain language.`,
       `<span class="out-bullet">Validated Pydantic data contracts are the only interface between</span>`,
-      `  the analytics engine and the AI review layer — the analytics`,
+      `  the analytics engine and the AI review layer, keeping the analytics`,
       `  engine cannot be talked out of the truth.`,
     ].join("\n"),
   },
@@ -97,9 +97,9 @@ export const PROJECTS = {
 
 export const PROJECT_READABLE = {
   "01-agentic-inventory.md": {
-    short: "Production LLM agent for live railcar inventory with read-only access, domain-grounded RAG, and a skill-discovery layer.",
+    short: "Production LLM agent for live railcar inventory with read only access, domain grounded RAG, and a skill discovery layer.",
     highlights: [
-      "Architected read-only LLM agent with Pydantic schema validation — no hallucinated writes reach production data.",
+      "Architected a read only LLM agent with Pydantic schema validation, so no hallucinated writes reach production data.",
       "Built RAG grounding agent reasoning in live database state and operating-procedure documentation.",
       "Added Redis caching and async skill-discovery that learns reusable query patterns without added latency.",
       "Engineered the sensor data layer (RFID, track-switch telegrams, PostgreSQL, Redis) for real-time inventory tracking.",
@@ -107,17 +107,17 @@ export const PROJECT_READABLE = {
     impact: "Shipped to the client for production use.",
   },
   "02-edge-perception.md": {
-    short: "Real-time edge perception and collision warning on NVIDIA Jetson, fusing camera, radar, GPS, and a track-occupancy regression model.",
+    short: "Real time edge perception and collision warning on NVIDIA Jetson, fusing camera, radar, GPS, and a track occupancy regression model.",
     highlights: [
       "Optimized TwinLiteNetPlus object detection through ONNX, TensorRT, and CUDA for low-latency Jetson inference.",
-      "Fused camera ego-path detection with radar and GPS telemetry for robust risk analysis.",
+      "Fused camera ego path detection with radar and GPS telemetry for robust risk analysis.",
       "Trained and optimized a regression model for track occupancy and future railcar position (classical ML + deep learning).",
       "Built multithreaded pipelines for embedded automotive compute, memory, and power limits.",
     ],
-    impact: "Helped develop a collision-warning solution that received U.S. safety certification for production deployment.",
+    impact: "Helped develop a collision warning solution that received U.S. safety certification for production deployment.",
   },
   "03-fall-intelligence.md": {
-    short: "Clinical fall-risk analysis agent where the model works through controlled tools, not raw patient data.",
+    short: "Clinical fall risk analysis agent where the model works through controlled tools, not raw patient data.",
     highlights: [
       "Built typed function-calling contracts (MCP) for safe clinical data access.",
       "Kept model reasoning separate from sensitive records via deterministic APIs.",
@@ -128,7 +128,7 @@ export const PROJECT_READABLE = {
   "04-goal-rehab.md": {
     short: "Rehabilitation progress intelligence with deterministic metrics and a separate LLM review layer.",
     highlights: [
-      "Computed completion, velocity, and timeline deviation from structured activity logs — no LLM in that path.",
+      "Computed completion, velocity, and timeline deviation from structured activity logs, with no LLM in that path.",
       "Used LLMs only to explain trusted metrics in plain language.",
       "Validated the interface between analytics and language generation with Pydantic.",
     ],

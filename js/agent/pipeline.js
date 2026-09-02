@@ -6,7 +6,7 @@ import { PERSONA } from "./intentGate.js";
 const API_ENDPOINT = "/api/chat";
 const OUT_OF_SCOPE = "I can only answer questions about Aravind E S's professional profile, including his projects, skills, experience, education, certifications, and contact details.";
 
-const RETRY_DELAYS = [700, 1400];
+const RETRY_DELAYS = [500];
 
 function wait(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));

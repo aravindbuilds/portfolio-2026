@@ -108,7 +108,7 @@ function removeTypingIndicator(indicator) {
 }
 
 function isGreeting(text) {
-  return /^(hi|hello|hey|hiya|yo|sup|hola|howdy|greetings|good\s+(morning|afternoon|evening))\b/i.test(text);
+  return /^(?:h+i+y*|he+y+|hello+|hiya+|yo+|sup+|hola+|howdy+|greetings+|good\s+(?:morning|afternoon|evening))(?:\s+there)?[\s!?.,]*$/i.test(text);
 }
 
 function fastReply(text) {

@@ -40,7 +40,7 @@ const PORTFOLIO_HTML = `
           <h1 class="hero-name">Aravind E S</h1>
           <p class="hero-tagline">
             I'm a curious, deliberate engineer who likes understanding how systems behave
-            under pressure — then making them useful, dependable, and clear to the people
+            under pressure, then making them useful, dependable, and clear to the people
             who rely on them.
           </p>
           <div class="hero-ctas">
@@ -55,7 +55,7 @@ const PORTFOLIO_HTML = `
             </div>
             <div class="stat">
               <div class="stat-value">1</div>
-              <div class="stat-label">U.S. safety-certified solution</div>
+              <div class="stat-label">U.S. safety certified solution</div>
             </div>
             <div class="stat">
               <div class="stat-value">4</div>
@@ -101,7 +101,7 @@ const PORTFOLIO_HTML = `
         </p>
         <p class="lead">
           What matters to me is <strong>building technology people can trust when the
-          inputs are messy and the stakes are real</strong> — with careful validation,
+          inputs are messy and the stakes are real</strong>, with careful validation,
           honest boundaries, and a practical respect for the details.
         </p>
       </div>
@@ -110,7 +110,7 @@ const PORTFOLIO_HTML = `
     <section class="projects" id="projects">
       <div class="container">
         <h2 class="section-title">Selected projects</h2>
-        <p class="section-sub">Four systems that shipped into compliance-critical production.</p>
+        <p class="section-sub">Four systems that shipped into compliance critical production.</p>
         <div class="project-grid" id="project-grid"></div>
       </div>
     </section>
@@ -133,7 +133,7 @@ const PORTFOLIO_HTML = `
     <section class="contact" id="contact">
       <div class="container">
         <h2 class="section-title">Let's talk</h2>
-        <p class="section-sub">Open to full-time AI/ML roles. Fastest path: email or LinkedIn.</p>
+        <p class="section-sub">Open to full time AI/ML roles. Fastest path: email or LinkedIn.</p>
         <div class="contact-grid">
           <div class="contact-card">
             <div class="contact-badge">Open to opportunities</div>

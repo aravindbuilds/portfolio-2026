@@ -23,7 +23,7 @@ const PERSONA = {
 
 // ── Fast-path: trivial patterns that never need the LLM ─────────────────
 
-const GREETING_RE = /^(hi|hello|hey|hiya|yo|sup|hola|howdy|greetings|good\s+(morning|afternoon|evening))\b/i;
+const GREETING_RE = /^(?:h+i+y*|he+y+|hello+|hiya+|yo+|sup+|hola+|howdy+|greetings+|good\s+(?:morning|afternoon|evening))(?:\s+there)?[\s!?.,]*$/i;
 const IDENTITY_RE = /^(who\s+are\s+you|what\s+are\s+you|are\s+you\s+(real|an?\s+ai|a\s+bot|human)|what\s+is\s+this)\b[?!.]*\s*$/i;
 const THANKS_RE = /^(thanks|thank\s+you|ty|thx|appreciate\s+it|cheers)\b[!.]*\s*$/i;
 

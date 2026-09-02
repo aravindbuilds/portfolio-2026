@@ -15,7 +15,7 @@ function section(title, body) {
 }
 
 export function greeting() {
-  return `Hi! 👋 I'm <b>Aravind's Assistant</b> — ask me about his work, skills, projects, experience, or contact details.`;
+  return `Hi! 👋 I'm <b>Aravind's Assistant</b> - ask me about his work, skills, projects, experience, or contact details.`;
 }
 
 export function identity() {
