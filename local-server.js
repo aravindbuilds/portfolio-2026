@@ -56,8 +56,8 @@ const MIME = {
 // ── OpenRouter proxy ─────────────────────────────────────────────────────
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
-const DEFAULT_MODEL = "llama-3.1-8b-instant";
-const FALLBACK_MODELS = ["llama-3.3-70b-versatile", "llama-3.1-70b-versatile"];
+const DEFAULT_MODEL = "qwen/qwen3.8-27b";
+const FALLBACK_MODELS = ["qwen/qwen3.6-27b", "openai/gpt-oss-safeguard-20b"];
 const CONTEXT_PATH = join(ROOT, "assets", "aravind.md");
 const NORMALIZER_PROMPT = `You are the scope and normalization layer for Aravind E S's portfolio assistant.
 Return ONLY JSON: {"normalized":"...","in_scope":true|false,"intent":"greeting"|"question","reason":"..."}.
@@ -106,7 +106,8 @@ async function callWithFallback(messages, maxTokens, temperature) {
 
 function parseNormalizer(text) {
   try {
-    const parsed = JSON.parse(String(text || "").replace(/^```(?:json)?\s*|\s*```$/g, "").trim());
+    const raw = String(text || "").replace(/^```(?:json)?\s*|\s*```$/g, "").trim();
+    const parsed = JSON.parse(raw.match(/\{[\s\S]*\}/)?.[0] || raw);
     return { normalized: String(parsed.normalized || "").trim().slice(0, 1000), inScope: parsed.in_scope === true, intent: parsed.intent === "greeting" ? "greeting" : "question" };
   } catch { return { normalized: "", inScope: false }; }
 }

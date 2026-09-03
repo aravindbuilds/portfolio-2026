@@ -9,8 +9,8 @@ import { fileURLToPath } from "url";
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
-const DEFAULT_MODEL = "llama-3.1-8b-instant";
-const FALLBACK_MODELS = ["llama-3.3-70b-versatile", "llama-3.1-70b-versatile"];
+const DEFAULT_MODEL = "qwen/qwen3.8-27b";
+const FALLBACK_MODELS = ["qwen/qwen3.6-27b", "allam-2-7b"];
 const MAX_TOKENS_CAP = 1200;
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const CONTEXT_PATH = join(ROOT, "assets", "aravind.md");
@@ -106,9 +106,12 @@ async function callWithFallback(messages, options = {}) {
         });
         clearTimeout(timeout);
         if (!response.ok) {
-          logEvent("provider-response", { provider: provider.url.includes("groq") ? "groq" : "openrouter", model, status: response.status, durationMs: Date.now() - startedAt });
-          const error = new Error(`${provider.url.includes("groq") ? "Groq" : "OpenRouter"} ${response.status}: ${(await response.text()).slice(0, 300)}`);
-            error.status = response.status;
+          const responseText = await response.text().catch(() => "");
+          const providerName = provider.url.includes("groq") ? "groq" : "openrouter";
+          logEvent("provider-response", { provider: providerName, model, status: response.status, durationMs: Date.now() - startedAt, detail: responseText.slice(0, 300) });
+          const error = new Error(`${providerName} ${response.status}: ${responseText.slice(0, 300)}`);
+          error.status = response.status;
+          throw error;
         }
         const data = await response.json();
         logEvent("provider-success", { provider: provider.url.includes("groq") ? "groq" : "openrouter", model, durationMs: Date.now() - startedAt });
@@ -126,7 +129,8 @@ async function callWithFallback(messages, options = {}) {
 function parseNormalizer(text) {
   const raw = String(text || "").replace(/^```(?:json)?\s*|\s*```$/g, "").trim();
   try {
-    const parsed = JSON.parse(raw);
+    const jsonText = raw.match(/\{[\s\S]*\}/)?.[0] || raw;
+    const parsed = JSON.parse(jsonText);
     return {
       normalized: String(parsed.normalized || "").trim().slice(0, 1000),
       inScope: parsed.in_scope === true,
