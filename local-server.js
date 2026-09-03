@@ -127,7 +127,7 @@ async function handleChat(body) {
     const normalized = parseNormalizer(first.text);
     if (!normalized.inScope || !normalized.normalized) return { status: 200, body: { answer: "NONE", in_scope: false } };
     if (normalized.intent === "greeting") return { status: 200, body: { answer: "GREETING", normalized: normalized.normalized, in_scope: true, intent: "greeting" } };
-    const second = await callWithFallback([{ role: "system", content: ANSWER_PROMPT + context.slice(0, 50000) }, { role: "user", content: normalized.normalized }], 350, 0.2);
+    const second = await callWithFallback([{ role: "system", content: ANSWER_PROMPT + context.slice(0, 50000) }, { role: "user", content: normalized.normalized }], 700, 0.2);
     return { status: 200, body: { answer: second.text, normalized: normalized.normalized, in_scope: true, model: second.model, usage: second.usage } };
   } catch (err) { return { status: 502, body: { error: "two_step_llm_error", message: String(err.message || err) } }; }
 }

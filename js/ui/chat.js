@@ -6,6 +6,7 @@ import { answer } from "../agent/pipeline.js";
 import { canQuery, recordQuery, getRemaining, getResetAt, RATE_LIMIT } from "../agent/rateLimit.js";
 import { isFastPath } from "../agent/intentGate.js";
 import { $ } from "./dom.js";
+import { formatMarkdown } from "./markdown.js";
 
 const CHAT_CSS = `
   .rag-answer{display:flex;flex-direction:column;gap:10px}
@@ -223,7 +224,7 @@ export function mountChatWidget(containerEl, { initialMessage = null } = {}) {
         ? fastReply(text)
         : result.ok === false
         ? `<span style="color:var(--red,#ff6459)">Refused:</span> ${escapeHtmlChat(result.text || "I can't help with that.")}`
-        : result.text;
+        : formatMarkdown(result.text);
       chatHistory.push({ role: "assistant", content: replyHtml });
       appendChatMsg("bot", replyHtml);
 

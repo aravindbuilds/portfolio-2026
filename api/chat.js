@@ -206,7 +206,7 @@ export default async function handler(req, res) {
     const answerResult = await callWithFallback([
       { role: "system", content: `${ANSWER_PROMPT}${context.slice(0, 50000)}` },
       { role: "user", content: normalized.normalized },
-    ], { model, maxTokens: Math.min(MAX_TOKENS_CAP, 350), temperature: 0.2 });
+    ], { model, maxTokens: Math.min(MAX_TOKENS_CAP, 700), temperature: 0.2 });
     logEvent("request-complete", { id, stage: "answer", durationMs: Date.now() - startedAt, model: answerResult.model });
     res.setHeader("X-Portfolio-Request-Id", id);
     return sendResponse(res, 200, { answer: answerResult.text, normalized: normalized.normalized, in_scope: true, model: answerResult.model, usage: answerResult.usage });

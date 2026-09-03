@@ -9,6 +9,7 @@ import { PROJECTS, PROJECT_READABLE, PROJECT_ORDER } from "../data/projects.js";
 import { RESUME_LINES } from "../data/resume.js";
 import { answer } from "../agent/pipeline.js";
 import { $, escapeHtml, actionButton, agentThread } from "../ui/dom.js";
+import { formatMarkdown } from "../ui/markdown.js";
 
 const TERMINAL_HTML = `
   <div class="crt-overlay" aria-hidden="true"></div>
@@ -901,7 +902,7 @@ async function handleChatSubmit(rawText) {
     removeTypingIndicator();
     const replyHtml = result.ok === false
       ? `<span class="out-error">Refused:</span> ${escapeHtmlChat(result.text || "I can't help with that.")}`
-      : result.text;
+      : formatMarkdown(result.text);
     chatHistory.push({ role: "assistant", content: replyHtml });
     appendChatMsg("bot", replyHtml);
   } catch (err) {
