@@ -32,6 +32,14 @@ When the context is not specific enough, say so plainly. Do not mention internal
 
 REFERENCE CONTEXT:\n`;
 
+function requestId() {
+  return Math.random().toString(36).slice(2, 10);
+}
+
+function logEvent(event, details = {}) {
+  console.info(`[portfolio-api] ${event}`, details);
+}
+
 function corsHeaders() {
   return {
     "Access-Control-Allow-Origin": "*",
@@ -75,58 +83,65 @@ async function callModel(apiKey, messages, options = {}) {
 async function callWithFallback(messages, options = {}) {
   const providers = [];
   if (process.env.GROQ_API_KEY) {
-      signal: controller.signal,
-      body: JSON.stringify({ model, messages, temperature: options.temperature ?? 0.1, ...(provider.url.includes("groq") ? { max_completion_tokens: options.maxTokens || 600 } : { max_tokens: options.maxTokens || 600 }) }),
+    providers.push({ key: process.env.GROQ_API_KEY, url: GROQ_URL, models: [options.model || DEFAULT_MODEL, ...FALLBACK_MODELS] });
   }
-    clearTimeout(timeout);
   if (process.env.OPENROUTER_API_KEY) {
     providers.push({ key: process.env.OPENROUTER_API_KEY, url: OPENROUTER_URL, models: ["openrouter/free"] });
   }
   if (!providers.length) throw new Error("No GROQ_API_KEY or OPENROUTER_API_KEY is configured");
 
   let lastError;
+  const providerTimeout = 8000;
   for (const provider of providers) {
     for (const model of provider.models) {
       try {
+        const startedAt = Date.now();
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), providerTimeout);
         const response = await fetch(provider.url, {
           method: "POST",
           headers: { Authorization: `Bearer ${provider.key}`, "Content-Type": "application/json" },
+          signal: controller.signal,
           body: JSON.stringify({ model, messages, temperature: options.temperature ?? 0.1, ...(provider.url.includes("groq") ? { max_completion_tokens: options.maxTokens || 600 } : { max_tokens: options.maxTokens || 600 }) }),
         });
+        clearTimeout(timeout);
         if (!response.ok) {
+          logEvent("provider-response", { provider: provider.url.includes("groq") ? "groq" : "openrouter", model, status: response.status, durationMs: Date.now() - startedAt });
           const error = new Error(`${provider.url.includes("groq") ? "Groq" : "OpenRouter"} ${response.status}: ${(await response.text()).slice(0, 300)}`);
-          error.status = response.status;
-  return jsonResponse(200, { answer: answerResult.text, normalized: normalized.normalized, in_scope: true, model: answerResult.model, usage: answerResult.usage });
+            error.status = response.status;
         }
         const data = await response.json();
+        logEvent("provider-success", { provider: provider.url.includes("groq") ? "groq" : "openrouter", model, durationMs: Date.now() - startedAt });
         return { text: data?.choices?.[0]?.message?.content || "", model: data?.model || model, usage: data?.usage || null };
       } catch (error) {
         lastError = error;
+        logEvent("provider-error", { provider: provider.url.includes("groq") ? "groq" : "openrouter", model, status: error.status || "network", message: String(error.message || error).slice(0, 180) });
         if (error.status && ![408, 429, 500, 502, 503, 504].includes(error.status)) break;
       }
     }
   }
   throw lastError;
-  const providerTimeout = 8000;
 }
 
 function parseNormalizer(text) {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), providerTimeout);
   const raw = String(text || "").replace(/^```(?:json)?\s*|\s*```$/g, "").trim();
   try {
     const parsed = JSON.parse(raw);
-          signal: controller.signal,
-          body: JSON.stringify({ model, messages, temperature: options.temperature ?? 0.1, ...(provider.url.includes("groq") ? { max_completion_tokens: options.maxTokens || 600 } : { max_tokens: options.maxTokens || 600 }) }),
-        });
-        clearTimeout(timeout);
+    return {
+      normalized: String(parsed.normalized || "").trim().slice(0, 1000),
+      inScope: parsed.in_scope === true,
+      intent: parsed.intent === "greeting" ? "greeting" : "question",
       reason: String(parsed.reason || "").slice(0, 120),
     };
   } catch {
+    return { normalized: "", inScope: false, reason: "normalizer returned invalid JSON" };
   }
 }
 
 export default async function handler(req, res) {
+  const id = requestId();
+  const startedAt = Date.now();
+  logEvent("request-start", { id, method: req.method, hasGroqKey: Boolean(process.env.GROQ_API_KEY), hasOpenRouterKey: Boolean(process.env.OPENROUTER_API_KEY) });
   // CORS preflight
   if (req.method === "OPTIONS") {
     return jsonResponse(204, {});
@@ -156,11 +171,13 @@ export default async function handler(req, res) {
   let context;
   try {
     context = await readFile(CONTEXT_PATH, "utf8");
+    logEvent("normalizer-start", { id, queryLength: query.length, contextLength: context.length });
     const normalizedResult = await callWithFallback([
       { role: "system", content: NORMALIZER_PROMPT },
       { role: "user", content: query.slice(0, 1200) },
     ], { model, maxTokens: 100, temperature: 0 });
     const normalized = parseNormalizer(normalizedResult.text);
+    logEvent("normalizer-result", { id, inScope: normalized.inScope, intent: normalized.intent, normalizedLength: normalized.normalized.length, model: normalizedResult.model });
     if (!normalized.inScope || !normalized.normalized) {
       return jsonResponse(200, {
         answer: "NONE",
@@ -171,14 +188,20 @@ export default async function handler(req, res) {
       });
     }
     if (normalized.intent === "greeting") {
+      logEvent("request-complete", { id, stage: "greeting", durationMs: Date.now() - startedAt });
       return jsonResponse(200, { answer: "GREETING", normalized: normalized.normalized, in_scope: true, intent: "greeting", model: normalizedResult.model });
     }
+    logEvent("answer-start", { id, normalizedLength: normalized.normalized.length });
     const answerResult = await callWithFallback([
       { role: "system", content: `${ANSWER_PROMPT}${context.slice(0, 50000)}` },
       { role: "user", content: normalized.normalized },
     ], { model, maxTokens: Math.min(MAX_TOKENS_CAP, 350), temperature: 0.2 });
-    return jsonResponse(200, { answer: answerResult.text, normalized: normalized.normalized, in_scope: true, model: answerResult.model, usage: answerResult.usage });
+    logEvent("request-complete", { id, stage: "answer", durationMs: Date.now() - startedAt, model: answerResult.model });
+    const response = jsonResponse(200, { answer: answerResult.text, normalized: normalized.normalized, in_scope: true, model: answerResult.model, usage: answerResult.usage });
+    response.headers["X-Portfolio-Request-Id"] = id;
+    return response;
   } catch (err) {
+    logEvent("request-failed", { id, durationMs: Date.now() - startedAt, status: err.status || 502, message: String(err?.message || err).slice(0, 300) });
     return jsonResponse(502, { error: "two_step_llm_error", message: String(err?.message || err) });
   }
 }
