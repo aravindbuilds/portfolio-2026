@@ -59,6 +59,13 @@ function jsonResponse(status, body) {
   };
 }
 
+function sendResponse(res, status, body) {
+  const response = jsonResponse(status, body);
+  res.statusCode = response.statusCode;
+  Object.entries(response.headers).forEach(([name, value]) => res.setHeader(name, value));
+  res.end(response.body);
+}
+
 async function callModel(apiKey, messages, options = {}) {
   const response = await fetch(OPENROUTER_URL, {
     method: "POST",
@@ -148,15 +155,15 @@ export default async function handler(req, res) {
   logEvent("request-start", { id, method: req.method, hasGroqKey: Boolean(process.env.GROQ_API_KEY), hasOpenRouterKey: Boolean(process.env.OPENROUTER_API_KEY) });
   // CORS preflight
   if (req.method === "OPTIONS") {
-    return jsonResponse(204, {});
+    return sendResponse(res, 204, {});
   }
 
   if (req.method !== "POST") {
-    return jsonResponse(405, { error: "method_not_allowed" });
+    return sendResponse(res, 405, { error: "method_not_allowed" });
   }
 
   if (!process.env.GROQ_API_KEY && !process.env.OPENROUTER_API_KEY) {
-    return jsonResponse(500, {
+    return sendResponse(res, 500, {
       error: "missing_provider_key",
       message: "Set GROQ_API_KEY or OPENROUTER_API_KEY in environment variables.",
     });
@@ -166,11 +173,11 @@ export default async function handler(req, res) {
   try {
     body = typeof req.body === "string" ? JSON.parse(req.body) : req.body || {};
   } catch {
-    return jsonResponse(400, { error: "invalid_json" });
+    return sendResponse(res, 400, { error: "invalid_json" });
   }
 
   const { query, model } = body;
-  if (!query || typeof query !== "string") return jsonResponse(400, { error: "missing_query" });
+  if (!query || typeof query !== "string") return sendResponse(res, 400, { error: "missing_query" });
 
   let context;
   try {
@@ -183,7 +190,7 @@ export default async function handler(req, res) {
     const normalized = parseNormalizer(normalizedResult.text);
     logEvent("normalizer-result", { id, inScope: normalized.inScope, intent: normalized.intent, normalizedLength: normalized.normalized.length, model: normalizedResult.model });
     if (!normalized.inScope || !normalized.normalized) {
-      return jsonResponse(200, {
+      return sendResponse(res, 200, {
         answer: "NONE",
         normalized: normalized.normalized,
         in_scope: false,
@@ -193,7 +200,7 @@ export default async function handler(req, res) {
     }
     if (normalized.intent === "greeting") {
       logEvent("request-complete", { id, stage: "greeting", durationMs: Date.now() - startedAt });
-      return jsonResponse(200, { answer: "GREETING", normalized: normalized.normalized, in_scope: true, intent: "greeting", model: normalizedResult.model });
+      return sendResponse(res, 200, { answer: "GREETING", normalized: normalized.normalized, in_scope: true, intent: "greeting", model: normalizedResult.model });
     }
     logEvent("answer-start", { id, normalizedLength: normalized.normalized.length });
     const answerResult = await callWithFallback([
@@ -201,11 +208,10 @@ export default async function handler(req, res) {
       { role: "user", content: normalized.normalized },
     ], { model, maxTokens: Math.min(MAX_TOKENS_CAP, 350), temperature: 0.2 });
     logEvent("request-complete", { id, stage: "answer", durationMs: Date.now() - startedAt, model: answerResult.model });
-    const response = jsonResponse(200, { answer: answerResult.text, normalized: normalized.normalized, in_scope: true, model: answerResult.model, usage: answerResult.usage });
-    response.headers["X-Portfolio-Request-Id"] = id;
-    return response;
+    res.setHeader("X-Portfolio-Request-Id", id);
+    return sendResponse(res, 200, { answer: answerResult.text, normalized: normalized.normalized, in_scope: true, model: answerResult.model, usage: answerResult.usage });
   } catch (err) {
     logEvent("request-failed", { id, durationMs: Date.now() - startedAt, status: err.status || 502, message: String(err?.message || err).slice(0, 300) });
-    return jsonResponse(502, { error: "two_step_llm_error", message: String(err?.message || err) });
+    return sendResponse(res, 502, { error: "two_step_llm_error", message: String(err?.message || err) });
   }
 }
