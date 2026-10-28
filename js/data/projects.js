@@ -4,6 +4,7 @@ export const PROJECT_ORDER = [
   "02-edge-perception.md",
   "03-fall-intelligence.md",
   "04-goal-rehab.md",
+  "05-tgtv.md",
 ];
 
 export const PROJECTS = {
@@ -93,6 +94,32 @@ export const PROJECTS = {
       `  engine cannot be talked out of the truth.`,
     ].join("\n"),
   },
+  "05-tgtv.md": {
+    title: "TGTV — Telegram as your private Netflix on Android TV",
+    year: "2026",
+    repo: "https://github.com/aravindbuilds/TelegramVideoTV",
+    tags: ["Kotlin", "TDLib", "ExoPlayer", "Android TV", "Open Source"],
+    body: [
+      `An open-source Android TV app that streams videos stored in your`,
+      `own Telegram account straight onto the television - Saved`,
+      `Messages, private library groups and channels become a Netflix-`,
+      `style library. Streaming happens in-process: TDLib downloads the`,
+      `exact byte ranges the player needs and ExoPlayer reads them from`,
+      `disk, so files never pass through any third-party host.`,
+      ``,
+      `<span class="out-bullet">Two login modes: a curator bot (private library appliance)</span>`,
+      `  or QR phone login for the full account history.`,
+      `<span class="out-bullet">TMDB metadata pipeline: release-name parsing with spelling-</span>`,
+      `  tolerant retries, web-assisted resolution, posters, ratings and`,
+      `  cast on every card.`,
+      `<span class="out-bullet">Stream without the Bot API 20 MB cap via TDLib range downloads,</span>`,
+      `  plus resume playback, OpenSubtitles fallback and automatic cache`,
+      `  hygiene (2 GB cap, per-video purge).`,
+      ``,
+      `<span class="out-dim">Outcome:</span> Released and in daily use on a Xiaomi Mi Box; source`,
+      `code, README and release APKs are public on GitHub.`,
+    ].join("\n"),
+  },
 };
 
 export const PROJECT_READABLE = {
@@ -133,5 +160,15 @@ export const PROJECT_READABLE = {
       "Validated the interface between analytics and language generation with Pydantic.",
     ],
     impact: "Readable progress summaries without letting the LLM rewrite the truth.",
+  },
+  "05-tgtv.md": {
+    short: "Open-source Android TV app that streams videos from your own Telegram account like a private Netflix, with in-process TDLib range streaming and no third-party hosts.",
+    highlights: [
+      "Streams Telegram-hosted videos in-process: TDLib byte-range downloads read straight into ExoPlayer, no Bot API cap, no external hosts.",
+      "Two login modes: curator bot as a library appliance, or QR phone login for the full chat history.",
+      "TMDB metadata pipeline with release-name parsing, spelling-tolerant retries and web-assisted resolution.",
+      "Resume playback, OpenSubtitles fallback, storage-aware streaming and automatic cache hygiene (2 GB cap).",
+    ],
+    impact: "Released v1.1 and in daily use on a Xiaomi Mi Box; source, README and release APKs are public on GitHub.",
   },
 };

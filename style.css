@@ -393,6 +393,14 @@ section + section { padding-top: 0; }
   margin-bottom: 0.75rem;
 }
 
+.project-repo {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 600;
+  margin-left: 0.6rem;
+}
+.project-repo:hover { text-decoration: underline; }
+
 .project-tags {
   display: flex;
   flex-wrap: wrap;

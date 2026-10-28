@@ -110,7 +110,7 @@ const PORTFOLIO_HTML = `
     <section class="projects" id="projects">
       <div class="container">
         <h2 class="section-title">Selected projects</h2>
-        <p class="section-sub">Four systems that shipped into compliance critical production.</p>
+        <p class="section-sub">Four systems that shipped into compliance critical production — plus an open-source Android TV app.</p>
         <div class="project-grid" id="project-grid"></div>
       </div>
     </section>
@@ -141,6 +141,7 @@ const PORTFOLIO_HTML = `
               <li><span class="contact-label">Email</span><a href="mailto:${LINKS.email}">${LINKS.email}</a></li>
               <li><span class="contact-label">Phone</span><a href="tel:${LINKS.phone.replace(/\s/g, "")}">${LINKS.phone}</a></li>
               <li><span class="contact-label">LinkedIn</span><a href="${LINKS.linkedin}" target="_blank" rel="noopener">linkedin.com/in/aravind-es</a></li>
+              <li><span class="contact-label">GitHub</span><a href="${LINKS.github}" target="_blank" rel="noopener">github.com/${LINKS.github.split("/").pop()}</a></li>
               <li><span class="contact-label">Location</span>${LINKS.location}</li>
             </ul>
             <a class="cta-btn cta-primary" href="assets/resume.pdf" target="_blank" rel="noopener">↓ Download resume</a>
@@ -158,6 +159,7 @@ const PORTFOLIO_HTML = `
       <div>© ${CURRENT_YEAR} Aravind E S</div>
       <div class="footer-links">
         <a href="?mode=terminal">View as terminal</a>
+        <a href="${LINKS.github}" target="_blank" rel="noopener">GitHub</a>
         <a href="${LINKS.linkedin}" target="_blank" rel="noopener">LinkedIn</a>
         <a href="mailto:${LINKS.email}">Email</a>
       </div>
@@ -174,11 +176,14 @@ function renderProjects() {
     if (!proj || !readable) return "";
     const tags = proj.tags.slice(0, 4).map((t) => `<span class="tag">${escapeHtml(t)}</span>`).join("");
     const highlights = readable.highlights.map((h) => `<li>${escapeHtml(h)}</li>`).join("");
+    const repoLink = proj.repo
+      ? `<a class="project-repo" href="${proj.repo}" target="_blank" rel="noopener">GitHub ↗</a>`
+      : "";
     return `
       <article class="project-card" data-project="${name}">
         <div class="project-num">0${i + 1}</div>
         <h3 class="project-title">${escapeHtml(proj.title)}</h3>
-        <div class="project-meta">${escapeHtml(proj.year)}</div>
+        <div class="project-meta">${escapeHtml(proj.year)}${repoLink}</div>
         <div class="project-tags">${tags}</div>
         <p class="project-short">${escapeHtml(readable.short)}</p>
         <ul class="project-highlights">${highlights}</ul>
