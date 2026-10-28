@@ -1,0 +1,5 @@
+# https://aravindes.vercel.app
+User-agent: *
+Allow: /
+
+Sitemap: https://aravindes.vercel.app/sitemap.xml
