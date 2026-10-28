@@ -104,76 +104,296 @@
   })();
 </script>
 
-<!-- Portfolio mode renders here (replaced by js/mode/portfolio.js on DOMContentLoaded).
-     The static markup below is the SEO / no-JS fallback: crawlers see real content. -->
+<!-- Portfolio mode renders into #portfolio-root on DOMContentLoaded (js/mode/portfolio.js),
+     replacing the identical static markup below — this is the SEO / no-JS fallback. -->
 <div id="portfolio-root">
-  <main>
+  <header class="nav" role="banner">
+    <div class="nav-inner">
+      <a href="#top" class="nav-brand">Aravind E S</a>
+      <nav class="nav-links" aria-label="Primary">
+        <a href="#projects" class="nav-link">Projects</a>
+        <a href="#experience" class="nav-link">Experience</a>
+        <a href="#skills" class="nav-link">Skills</a>
+        <a href="#contact" class="nav-link">Contact</a>
+      </nav>
+      <div class="nav-actions">
+        <a class="cta-btn" href="#contact">Hire me</a>
+      </div>
+    </div>
+  </header>
+
+  <main id="top">
     <section class="hero">
+      <div class="hero-inner">
+        <div class="hero-text">
+          <div class="hero-eyebrow">AI Software Engineer · Kerala, India</div>
+          <h1 class="hero-name">Aravind E S</h1>
+          <p class="hero-tagline">
+            I'm a curious, deliberate engineer who likes understanding how systems behave
+            under pressure, then making them useful, dependable, and clear to the people
+            who rely on them.
+          </p>
+          <div class="hero-ctas">
+            <a class="cta-btn cta-primary" href="assets/resume.pdf" target="_blank" rel="noopener">↓ Download resume</a>
+            <a class="cta-btn cta-secondary" href="#projects">View projects</a>
+            <a class="cta-btn cta-secondary" href="#contact">Chat with my AI</a>
+          </div>
+          <div class="hero-stats">
+            <div class="stat">
+              <div class="stat-value">2 yrs</div>
+              <div class="stat-label">production AI</div>
+            </div>
+            <div class="stat">
+              <div class="stat-value">1</div>
+              <div class="stat-label">U.S. safety certified solution</div>
+            </div>
+            <div class="stat">
+              <div class="stat-value">4</div>
+              <div class="stat-label">flagship projects</div>
+            </div>
+          </div>
+        </div>
+        <div class="hero-visual" aria-hidden="true">
+          <svg viewBox="0 0 320 320" class="hero-svg">
+            <defs>
+              <radialGradient id="rg" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stop-color="var(--accent)" stop-opacity="0.35"/>
+                <stop offset="100%" stop-color="var(--accent)" stop-opacity="0"/>
+              </radialGradient>
+            </defs>
+            <circle cx="160" cy="160" r="140" fill="url(#rg)"/>
+            <circle cx="160" cy="160" r="120" fill="none" stroke="var(--border)" stroke-width="1"/>
+            <circle cx="160" cy="160" r="90" fill="none" stroke="var(--border)" stroke-width="1"/>
+            <circle cx="160" cy="160" r="60" fill="none" stroke="var(--border)" stroke-width="1"/>
+            <circle cx="160" cy="160" r="30" fill="none" stroke="var(--border)" stroke-width="1"/>
+            <line x1="160" y1="20" x2="160" y2="300" stroke="var(--border)" stroke-width="1"/>
+            <line x1="20" y1="160" x2="300" y2="160" stroke="var(--border)" stroke-width="1"/>
+            <circle cx="210" cy="110" r="4" fill="var(--accent)"/>
+            <circle cx="120" cy="190" r="4" fill="var(--accent)"/>
+            <circle cx="220" cy="220" r="4" fill="var(--accent)"/>
+            <circle cx="100" cy="120" r="3" fill="var(--text-dim)"/>
+            <circle cx="180" cy="80" r="3" fill="var(--text-dim)"/>
+          </svg>
+        </div>
+      </div>
+    </section>
+
+    <section class="about">
       <div class="container">
-        <h1>Aravind E S — AI Software Engineer</h1>
-        <p>
-          AI Software Engineer at Tata Elxsi with two years building production systems
-          across cloud backends and edge devices: hallucination-resistant agentic AI,
-          RAG pipelines, and real-time computer vision on constrained edge hardware
-          (YOLO, ONNX, TensorRT, NVIDIA Jetson). Creator of
-          <a href="https://github.com/aravindbuilds/TelegramVideoTV" rel="noopener">TGTV</a>,
-          an open-source Android TV app that streams video from your own Telegram account.
+        <h2 class="section-title">About</h2>
+        <p class="lead">
+          I'm an AI Software Engineer at <strong>Tata Elxsi</strong> with two years
+          building production systems across cloud backends and edge devices. I tend to
+          be methodical and curious: I ask what can go wrong, make the important parts
+          observable, and keep the system understandable for the team that owns it.
+          That mindset has shaped my work in agentic AI, real-time computer vision,
+          and constrained edge hardware.
+        </p>
+        <p class="lead">
+          What matters to me is <strong>building technology people can trust when the
+          inputs are messy and the stakes are real</strong>, with careful validation,
+          honest boundaries, and a practical respect for the details.
         </p>
       </div>
     </section>
 
-    <section class="projects">
+    <section class="projects" id="projects">
       <div class="container">
-        <h2>Selected projects</h2>
-        <div class="project-grid">
-          <article class="project-card">
-            <h3>Agentic AI Inventory Intelligence Platform</h3>
-            <p>Production LLM agent for live railcar inventory: read-only access, validated queries, Pydantic schemas, domain-grounded RAG, Redis caching and skill discovery. FastAPI, MCP, RAG, Redis, PostgreSQL. Shipped to the client for production use.</p>
+        <h2 class="section-title">Selected projects</h2>
+        <p class="section-sub">Four systems that shipped into compliance critical production — plus an open-source Android TV app.</p>
+        <div class="project-grid" id="project-grid">
+          <article class="project-card" data-project="01-agentic-inventory.md">
+            <div class="project-num">01</div>
+            <h3 class="project-title">Agentic AI Inventory Intelligence Platform</h3>
+            <div class="project-meta">2024–25</div>
+            <div class="project-tags"><span class="tag">FastAPI</span><span class="tag">MCP</span><span class="tag">RAG</span><span class="tag">Pydantic</span></div>
+            <p class="project-short">Production LLM agent for live railcar inventory with read only access, domain grounded RAG, and a skill discovery layer.</p>
+            <ul class="project-highlights">
+              <li>Architected a read only LLM agent with Pydantic schema validation, so no hallucinated writes reach production data.</li>
+              <li>Built RAG grounding agent reasoning in live database state and operating-procedure documentation.</li>
+              <li>Added Redis caching and async skill-discovery that learns reusable query patterns without added latency.</li>
+              <li>Engineered the sensor data layer (RFID, track-switch telegrams, PostgreSQL, Redis) for real-time inventory tracking.</li>
+            </ul>
+            <div class="project-impact"><span class="project-impact-label">Impact</span><span>Shipped to the client for production use.</span></div>
           </article>
-          <article class="project-card">
-            <h3>Real-Time Edge Perception &amp; Collision Warning System</h3>
-            <p>Camera, radar and GPS sensor fusion with a regression model for track occupancy on NVIDIA Jetson (ONNX, TensorRT, CUDA). Part of a collision-warning solution that received U.S. safety certification.</p>
+          <article class="project-card" data-project="02-edge-perception.md">
+            <div class="project-num">02</div>
+            <h3 class="project-title">Real-Time Edge Perception &amp; Collision Warning System</h3>
+            <div class="project-meta">2026</div>
+            <div class="project-tags"><span class="tag">ONNX</span><span class="tag">TensorRT</span><span class="tag">CUDA</span><span class="tag">Jetson</span></div>
+            <p class="project-short">Real time edge perception and collision warning on NVIDIA Jetson, fusing camera, radar, GPS, and a track occupancy regression model.</p>
+            <ul class="project-highlights">
+              <li>Optimized TwinLiteNetPlus object detection through ONNX, TensorRT, and CUDA for low-latency Jetson inference.</li>
+              <li>Fused camera ego path detection with radar and GPS telemetry for robust risk analysis.</li>
+              <li>Trained and optimized a regression model for track occupancy and future railcar position (classical ML + deep learning).</li>
+              <li>Built multithreaded pipelines for embedded automotive compute, memory, and power limits.</li>
+            </ul>
+            <div class="project-impact"><span class="project-impact-label">Impact</span><span>Helped develop a collision warning solution that received U.S. safety certification for production deployment.</span></div>
           </article>
-          <article class="project-card">
-            <h3>Agentic AI Clinical Fall Intelligence Platform</h3>
-            <p>LLM-powered fall-risk analysis through typed function-calling contracts (MCP), containerized on AWS EC2 — never raw access to clinical records.</p>
+          <article class="project-card" data-project="03-fall-intelligence.md">
+            <div class="project-num">03</div>
+            <h3 class="project-title">Agentic AI Clinical Fall Intelligence Platform</h3>
+            <div class="project-meta">2025</div>
+            <div class="project-tags"><span class="tag">FastAPI</span><span class="tag">MCP</span><span class="tag">LLM Tool Calling</span><span class="tag">Docker</span></div>
+            <p class="project-short">Clinical fall risk analysis agent where the model works through controlled tools, not raw patient data.</p>
+            <ul class="project-highlights">
+              <li>Built typed function-calling contracts (MCP) for safe clinical data access.</li>
+              <li>Kept model reasoning separate from sensitive records via deterministic APIs.</li>
+              <li>Containerized the backend on AWS EC2 with Nginx reverse proxying.</li>
+            </ul>
+            <div class="project-impact"><span class="project-impact-label">Impact</span><span>A production-style agent pattern for high-trust healthcare analytics.</span></div>
           </article>
-          <article class="project-card">
-            <h3>Goal Progress &amp; Rehabilitation Intelligence Platform</h3>
-            <p>Deterministic progress metrics from structured activity logs, with a separate LLM layer that only explains the trusted numbers in plain language.</p>
+          <article class="project-card" data-project="04-goal-rehab.md">
+            <div class="project-num">04</div>
+            <h3 class="project-title">Goal Progress &amp; Rehabilitation Intelligence Platform</h3>
+            <div class="project-meta">2026</div>
+            <div class="project-tags"><span class="tag">Python</span><span class="tag">FastAPI</span><span class="tag">Pydantic</span><span class="tag">LLMs</span></div>
+            <p class="project-short">Rehabilitation progress intelligence with deterministic metrics and a separate LLM review layer.</p>
+            <ul class="project-highlights">
+              <li>Computed completion, velocity, and timeline deviation from structured activity logs, with no LLM in that path.</li>
+              <li>Used LLMs only to explain trusted metrics in plain language.</li>
+              <li>Validated the interface between analytics and language generation with Pydantic.</li>
+            </ul>
+            <div class="project-impact"><span class="project-impact-label">Impact</span><span>Readable progress summaries without letting the LLM rewrite the truth.</span></div>
           </article>
-          <article class="project-card">
-            <h3><a href="https://github.com/aravindbuilds/TelegramVideoTV" rel="noopener">TGTV — Telegram as your private Netflix on Android TV</a></h3>
-            <p>Open-source Android TV app (Kotlin, TDLib, ExoPlayer) that streams videos from your own Telegram account in-process, without third-party hosts: TMDB metadata, resume playback, subtitles fallback, storage-aware cache management.</p>
+          <article class="project-card" data-project="05-tgtv.md">
+            <div class="project-num">05</div>
+            <h3 class="project-title">TGTV — Telegram as your private Netflix on Android TV</h3>
+            <div class="project-meta">2026<a class="project-repo" href="https://github.com/aravindbuilds/TelegramVideoTV" target="_blank" rel="noopener">GitHub ↗</a></div>
+            <div class="project-tags"><span class="tag">Kotlin</span><span class="tag">TDLib</span><span class="tag">ExoPlayer</span><span class="tag">Android TV</span></div>
+            <p class="project-short">Open-source Android TV app that streams videos from your own Telegram account like a private Netflix, with in-process TDLib range streaming and no third-party hosts.</p>
+            <ul class="project-highlights">
+              <li>Streams Telegram-hosted videos in-process: TDLib byte-range downloads read straight into ExoPlayer, no Bot API cap, no external hosts.</li>
+              <li>Two login modes: curator bot as a library appliance, or QR phone login for the full chat history.</li>
+              <li>TMDB metadata pipeline with release-name parsing, spelling-tolerant retries and web-assisted resolution.</li>
+              <li>Resume playback, OpenSubtitles fallback, storage-aware streaming and automatic cache hygiene (2 GB cap).</li>
+            </ul>
+            <div class="project-impact"><span class="project-impact-label">Impact</span><span>Released v1.1 and in daily use on a Xiaomi Mi Box; source, README and release APKs are public on GitHub.</span></div>
           </article>
         </div>
       </div>
     </section>
 
-    <section class="skills">
+    <section class="experience" id="experience">
       <div class="container">
-        <h2>Skills</h2>
-        <ul>
-          <li>AI/ML &amp; Computer Vision: YOLO, SAM 2.1, OpenCV, deep learning, model optimization, QLoRA, MLflow</li>
-          <li>GenAI &amp; Agentic: LLM agents, RAG, MCP, LangChain, LlamaIndex</li>
-          <li>Edge &amp; inference: NVIDIA Jetson, ONNX, TensorRT, CUDA, sensor fusion, ROS</li>
-          <li>Backend: Python, C++, FastAPI, Flask, PostgreSQL, Redis, Docker, Kubernetes, AWS, Azure, Nginx</li>
-          <li>App: Kotlin, Android TV (Leanback), Media3/ExoPlayer, TDLib</li>
-        </ul>
+        <h2 class="section-title">Experience</h2>
+        <div class="timeline" id="timeline">
+          <article class="exp-item">
+            <div class="exp-marker"></div>
+            <div class="exp-content">
+              <div class="exp-head">
+                <div>
+                  <h3 class="exp-role">AI Software Engineer</h3>
+                  <div class="exp-company">Tata Elxsi · Kerala, India</div>
+                </div>
+                <div class="exp-period">Dec 2024 – Present</div>
+              </div>
+              <ul class="exp-bullets">
+                <li>Architected a production LLM agent enforcing read-only access, validated queries, and Pydantic schemas — no hallucinated writes reach live railcar data.</li>
+                <li>Built domain-grounded RAG fusing real-time DB state with operating procedures; shipped Redis-cached async skill-discovery with zero user-facing latency.</li>
+                <li>Developed real-time perception inference pipelines with TensorRT, CUDA, and NVIDIA Jetson — ~25% lower inference latency; helped develop a U.S. safety-certified collision-warning solution.</li>
+                <li>Deployed CV workloads (YOLO, SAM 2.1, OCR/VLM, multi-camera tracking) on Jetson under tight compute/memory/power budgets; stabilized RTSP/FFMPEG/GStreamer streaming by ~30% under degraded networks.</li>
+                <li>Owned SQLite → PostgreSQL / Azure PostgreSQL migration for concurrent high-throughput production workloads.</li>
+              </ul>
+              <div class="exp-tags"><span class="tag tag-sm">LLM Agents</span><span class="tag tag-sm">RAG</span><span class="tag tag-sm">TensorRT</span><span class="tag tag-sm">Jetson</span><span class="tag tag-sm">YOLO</span><span class="tag tag-sm">MCP</span><span class="tag tag-sm">Sensor Fusion</span></div>
+            </div>
+          </article>
+          <article class="exp-item">
+            <div class="exp-marker"></div>
+            <div class="exp-content">
+              <div class="exp-head">
+                <div>
+                  <h3 class="exp-role">AI Software Developer Intern</h3>
+                  <div class="exp-company">Tata Elxsi · Kerala, India</div>
+                </div>
+                <div class="exp-period">Jan 2024 – Jun 2024</div>
+              </div>
+              <ul class="exp-bullets">
+                <li>Developed modified YOLO architectures with dual detection heads for extended detection on pretrained models.</li>
+                <li>Built radar point-cloud processing pipelines using ROS for real-time perception systems.</li>
+                <li>Developed a multi-camera streaming backend service with sockets and multithreading for real-time inference.</li>
+              </ul>
+              <div class="exp-tags"><span class="tag tag-sm">YOLO</span><span class="tag tag-sm">ROS</span><span class="tag tag-sm">Multi-Camera</span><span class="tag tag-sm">Radar</span></div>
+            </div>
+          </article>
+        </div>
       </div>
     </section>
 
-    <section class="contact">
+    <section class="skills" id="skills">
       <div class="container">
-        <h2>Contact</h2>
-        <ul>
-          <li>GitHub — <a href="https://github.com/aravindbuilds" rel="noopener">github.com/aravindbuilds</a></li>
-          <li>LinkedIn — <a href="https://linkedin.com/in/aravind-es" rel="noopener">linkedin.com/in/aravind-es</a></li>
-          <li>Email — <a href="mailto:mail4aravindes@gmail.com">mail4aravindes@gmail.com</a></li>
-        </ul>
+        <h2 class="section-title">Skills</h2>
+        <p class="section-sub">Two years of focused production work. Grouped by domain.</p>
+        <div class="skills-grid" id="skills-grid">
+          <div class="skill-group">
+            <h3 class="skill-group-title">AI / ML &amp; Computer Vision</h3>
+            <ul class="skill-list"><li>YOLO</li><li>SAM 2.1</li><li>TwinLiteNetPlus</li><li>OCR/VLM</li><li>OpenCV</li><li>Camera Calibration</li><li>Multi-Camera Tracking</li><li>Deep Learning</li><li>Model Optimization</li><li>QLoRA</li><li>MLflow</li></ul>
+          </div>
+          <div class="skill-group">
+            <h3 class="skill-group-title">GenAI &amp; Agentic AI</h3>
+            <ul class="skill-list"><li>LLM Agents</li><li>LLM Engineering</li><li>RAG</li><li>Agentic Workflows</li><li>LLM Tool Calling</li><li>MCP</li><li>LangChain</li><li>LlamaIndex</li><li>Pydantic Schema Validation</li></ul>
+          </div>
+          <div class="skill-group">
+            <h3 class="skill-group-title">Edge &amp; Sensor Systems</h3>
+            <ul class="skill-list"><li>NVIDIA Jetson</li><li>Edge Inference</li><li>ROS</li><li>Radar Point Clouds</li><li>Sensor Fusion</li><li>Low-Latency Pipeline</li><li>Multithreading</li></ul>
+          </div>
+          <div class="skill-group">
+            <h3 class="skill-group-title">Inference Optimization</h3>
+            <ul class="skill-list"><li>TensorRT</li><li>CUDA</li><li>ONNX</li><li>Model Optimization</li></ul>
+          </div>
+          <div class="skill-group">
+            <h3 class="skill-group-title">Backend &amp; APIs</h3>
+            <ul class="skill-list"><li>Python</li><li>C++</li><li>FastAPI</li><li>Flask</li><li>REST APIs</li><li>Microservices</li><li>Pydantic</li><li>Celery</li></ul>
+          </div>
+          <div class="skill-group">
+            <h3 class="skill-group-title">Databases &amp; Caching</h3>
+            <ul class="skill-list"><li>PostgreSQL</li><li>SQLite</li><li>Redis</li></ul>
+          </div>
+          <div class="skill-group">
+            <h3 class="skill-group-title">Cloud &amp; DevOps</h3>
+            <ul class="skill-list"><li>Docker</li><li>Kubernetes</li><li>AWS EC2</li><li>AWS Bedrock</li><li>SageMaker</li><li>Azure</li><li>Google Cloud</li><li>Nginx</li><li>Git</li></ul>
+          </div>
+          <div class="skill-group">
+            <h3 class="skill-group-title">Languages</h3>
+            <ul class="skill-list"><li>Python</li><li>C++</li><li>C</li><li>SQL</li><li>TypeScript</li></ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="contact" id="contact">
+      <div class="container">
+        <h2 class="section-title">Let's talk</h2>
+        <p class="section-sub">Open to full time AI/ML roles. Fastest path: email or LinkedIn.</p>
+        <div class="contact-grid">
+          <div class="contact-card">
+            <div class="contact-badge">Open to opportunities</div>
+            <ul class="contact-list">
+              <li><span class="contact-label">Email</span><a href="mailto:mail4aravindes@gmail.com">mail4aravindes@gmail.com</a></li>
+              <li><span class="contact-label">Phone</span><a href="tel:+919496915905">+91 9496915905</a></li>
+              <li><span class="contact-label">LinkedIn</span><a href="https://linkedin.com/in/aravind-es" target="_blank" rel="noopener">linkedin.com/in/aravind-es</a></li>
+              <li><span class="contact-label">GitHub</span><a href="https://github.com/aravindbuilds" target="_blank" rel="noopener">github.com/aravindbuilds</a></li>
+              <li><span class="contact-label">Location</span>Kerala, India</li>
+            </ul>
+            <a class="cta-btn cta-primary" href="assets/resume.pdf" target="_blank" rel="noopener">↓ Download resume</a>
+          </div>
+          <!-- Chat widget mounts here on DOMContentLoaded -->
+        </div>
       </div>
     </section>
   </main>
+
+  <footer class="footer" role="contentinfo">
+    <div class="container footer-inner">
+      <div>© 2026 Aravind E S</div>
+      <div class="footer-links">
+        <a href="?mode=terminal">View as terminal</a>
+        <a href="https://github.com/aravindbuilds" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://linkedin.com/in/aravind-es" target="_blank" rel="noopener">LinkedIn</a>
+        <a href="mailto:mail4aravindes@gmail.com">Email</a>
+      </div>
+    </div>
+  </footer>
 </div>
 
 <!-- Terminal mode mounts here (js/mode/terminal.js injects its own DOM on ?mode=terminal) -->
